@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package oauth;
+
+service OAuthService {
+  // Obtiene el access token actual de una plataforma (twitch o kick)
+  rpc GetToken(TokenRequest) returns (TokenResponse);
+
+  // Refresca un access token usando el refresh_token de una plataforma
+  rpc RefreshToken(RefreshRequest) returns (TokenResponse);
+
+  // Obtiene todas las credenciales de una plataforma (tokens, IDs, scopes)
+  rpc GetCredentials(CredentialsRequest) returns (CredentialsResponse);
+
+  // Revoca un access token de una plataforma
+  rpc RevokeToken(RevokeRequest) returns (RevokeResponse);
+}
+
+message TokenRequest {
+  string platform = 1; // "twitch" o "kick"
+}
+
+message TokenResponse {
+  string platform = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  string token_type = 4;
+  int32 expires_in = 5;
+  string scope = 6;
+  bool success = 7;
+  string error = 8;
+}
+
+message RefreshRequest {
+  string platform = 1; // "twitch" o "kick"
+}
+
+message CredentialsRequest {
+  string platform = 1; // "twitch" o "kick"
+}
+
+message CredentialsResponse {
+  string platform = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  string token_type = 4;
+  int32 expires_in = 5;
+  string scope = 6;
+  string bot_user_id = 7;
+  string broadcaster_ids = 8;
+  bool success = 9;
+  string error = 10;
+}
+
+message RevokeRequest {
+  string platform = 1; // "twitch" o "kick"
+  string token = 2;
+}
+
+message RevokeResponse {
+  bool success = 1;
+  string error = 2;
+}
