@@ -9,10 +9,27 @@ from __future__ import annotations
 
 import grpc
 from concurrent import futures
+from datetime import datetime, timezone
+from typing import Optional
 
 from oauth_module.proto import oauth_pb2, oauth_pb2_grpc
 from oauth_module.manager import OAuthManager
 from oauth_module.config import load_config
+
+
+def _remaining_seconds(expires_at: Optional[str]) -> int:
+    """Calcula los segundos restantes hasta la expiración absoluta.
+
+    Devuelve 0 si no hay fecha, si ya expiró o si la fecha es inválida.
+    """
+    if not expires_at:
+        return 0
+    try:
+        expires = datetime.fromisoformat(expires_at)
+        now = datetime.now(timezone.utc)
+        return max(0, int((expires - now).total_seconds()))
+    except ValueError:
+        return 0
 
 
 class OAuthServiceServicer(oauth_pb2_grpc.OAuthServiceServicer):
@@ -136,12 +153,14 @@ class OAuthServiceServicer(oauth_pb2_grpc.OAuthServiceServicer):
         creds = store.load()
         if platform == "twitch":
             pc = creds.twitch
+            # expires_in restante calculado desde la expiración absoluta, no el valor original del flujo OAuth.
+            expires_in = _remaining_seconds(pc.expires_at) if pc.expires_at else (pc.expires_in or 0)
             return oauth_pb2.CredentialsResponse(
                 platform=platform,
                 access_token=pc.access_token,
                 refresh_token=pc.refresh_token,
                 token_type=pc.token_type,
-                expires_in=pc.expires_in or 0,
+                expires_in=expires_in,
                 scope=pc.scope,
                 bot_user_id=creds.twitch_bot_user_id,
                 broadcaster_ids=creds.twitch_broadcaster_ids,
@@ -150,12 +169,13 @@ class OAuthServiceServicer(oauth_pb2_grpc.OAuthServiceServicer):
             )
         elif platform == "kick":
             pc = creds.kick
+            expires_in = _remaining_seconds(pc.expires_at) if pc.expires_at else (pc.expires_in or 0)
             return oauth_pb2.CredentialsResponse(
                 platform=platform,
                 access_token=pc.access_token,
                 refresh_token=pc.refresh_token,
                 token_type=pc.token_type,
-                expires_in=pc.expires_in or 0,
+                expires_in=expires_in,
                 scope=pc.scope,
                 bot_user_id="",
                 broadcaster_ids=creds.kick_broadcaster_ids,
